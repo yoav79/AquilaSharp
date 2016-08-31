@@ -1,6 +1,6 @@
 ﻿namespace Aquila.Protocol
 {
-    public class CurrentOptions
+    public class Options
     {
         public bool Prom { get; set; }
 

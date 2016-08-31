@@ -1,6 +1,6 @@
 ﻿namespace Aquila.Protocol
 {
-    public class CurrentSecurity
+    public class Security
     {
         public bool Enabled { get; set; }
 

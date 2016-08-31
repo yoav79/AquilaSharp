@@ -49,7 +49,7 @@ namespace Aquila.Protocol
 
         private void _serialPort_DataReceived(object sender, SerialDataReceivedEventArgs e)
         {
-            Receive?.Invoke(this, e);
+            Receive?.Invoke(_serialPort, e);
         }
 
         public void Close()
@@ -65,46 +65,6 @@ namespace Aquila.Protocol
         public void Write(char data)
         {
             _serialPort.Write(new List<char>() {data}.ToArray(), 0, 1);
-        }
-
-        public static int CalculateCrc(byte[] data)
-        {
-            int crc = 0;
-            var size = data.Length;
-            var i = 0;
-            var index = 0;
-
-            while (--size >= 0)
-            {
-                crc = (crc ^ data[index++] << 8) & 0xFFFF;
-                i = 8;
-                do
-                {
-                    if ((crc & 0x8000) == 1)
-                    {
-                        crc = (crc << 1 ^ 0x1021) & 0xFFFF;
-                    }
-                    else
-                    {
-                        crc = (crc << 1) & 0xFFFF;
-                    }
-                } while (--i > 0);
-            }
-
-            return crc & 0xFFFF;
-        }
-
-        public static bool CheckCrc(byte[] data)
-        {
-            // Getting crc from packet
-            var dataCrc = (data[data.Length - 1]) << 8;
-            dataCrc |= (data[data.Length - 2]) & 0x00FF;
-
-            // Calculating crc
-            var calcdCrc = CalculateCrc(data.Take(data.Length - 2).ToArray());
-
-            // Comparing
-            return calcdCrc == dataCrc;
         }
     }
 }

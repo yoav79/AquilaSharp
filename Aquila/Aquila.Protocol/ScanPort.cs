@@ -35,7 +35,7 @@ namespace Aquila.Protocol
                 if (!st.Open()) continue;
 
                 Console.WriteLine("  *Trying:" + port);
-                st.Wait();
+                
 
                 if (!st.IsConnected) continue;
 
