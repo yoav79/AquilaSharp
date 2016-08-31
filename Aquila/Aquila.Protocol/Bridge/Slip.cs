@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.IO.Ports;
 using System.Linq;
 
-namespace Aquila.Protocol
+namespace Aquila.Protocol.Bridge
 {
 
     public class Slip

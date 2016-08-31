@@ -1,0 +1,40 @@
+﻿Inhouse.Utils
+
+Utils to .Net Apps by Inhouse
+
+*Extension
+	string extensions
+	objects extension
+
+*MSMQ
+	listener of msmq handle tps, and local or remote queue
+	sender of message
+
+*Install Service
+    installer of service 
+
+*Http 
+	post and get
+
+   Change Log
+   *****************************
+   V 1.0.0.5
+   - Add string extension converters 
+		* ToInt, ToBool, ToDatetime, ToDouble, etc..
+   - Add Json lib for parsing and serialization
+   
+   *****************************
+   V 1.0.0.4
+   - fix Installer service
+   - add Extensions for objects and string
+   
+   *****************************
+   V 1.0.0.3
+   
+   *****************************
+   V 1.0.0.2
+   - Fix bug minors
+   
+   *****************************
+   V 1.0.0.1
+   - Initial Relase!

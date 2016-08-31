@@ -3,7 +3,7 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 14
 VisualStudioVersion = 14.0.25420.1
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Aquila.Bridge", "Aquila.Bridge\Aquila.Bridge.csproj", "{35494D44-E14B-4C4C-B7C7-BF7B7F8A5FE5}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Aquila.Service", "Aquila.Bridge\Aquila.Service.csproj", "{35494D44-E14B-4C4C-B7C7-BF7B7F8A5FE5}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Aquila.Protocol", "Aquila.Protocol\Aquila.Protocol.csproj", "{BE1CE018-0CC8-481A-87E5-782B664FDC42}"
 EndProject

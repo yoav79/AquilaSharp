@@ -1,11 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
 
-namespace Aquila.Protocol
+namespace Aquila.Protocol.Bridge
 {
     /*
      *  802.15.4 Dongle interface utility.
@@ -100,8 +97,7 @@ namespace Aquila.Protocol
         const byte Enable = 1;
         const byte Key = 2;
         #endregion
-
-
+        
         private readonly Slip _slip;
         private bool _ready;
         private readonly List<byte> _longadrress;
@@ -112,6 +108,8 @@ namespace Aquila.Protocol
 
         public bool IsReady => _ready;
 
+        public event PackagesReceivedEventHandler Receive;
+        
         public Bridge()
         {
             _ready = false;
@@ -151,27 +149,6 @@ namespace Aquila.Protocol
             if (data.Count == 0)
                 return;
 
-
-            if (data[Command] == CmdData)
-            {
-                if (data.Count < 10)
-                    return;
-
-                var p = new Packet()
-                {
-                    Lqi = data[Lqi],
-                    Rssi = data[Rssi],
-                    SrcAddr = data[SrcAddrL] | data[SrcAddrH] << 8,
-                    DstAddr = data[DstAddrL] | data[DstAddrH] << 8,
-                    SrcEndPoint = data[SrcEndPoint],
-                    DstEndPoint = data[DstEndPoint],
-                    Size = data[Size],
-                    Frame = data.Skip(10).Take(Size).ToArray(),
-                };
-
-                //Send Packet
-            }
-
             switch (data[Command])
             {
                 case CmdAck:
@@ -203,6 +180,23 @@ namespace Aquila.Protocol
                     _currentOptions.Pan = data[PanL] | data[PanH] << 8;
                     _currentOptions.Channel = data[Channel];
                     _currentOptions.Address = data[AddressL] | data[AddressH] << 8;
+                    break;
+                case CmdData:
+                    if (data.Count < 10) return;
+
+                    var p = new Packet()
+                    {
+                        Lqi = data[Lqi],
+                        Rssi = data[Rssi],
+                        SrcAddr = data[SrcAddrL] | data[SrcAddrH] << 8,
+                        DstAddr = data[DstAddrL] | data[DstAddrH] << 8,
+                        SrcEndPoint = data[SrcEndPoint],
+                        DstEndPoint = data[DstEndPoint],
+                        Size = data[Size],
+                        Frame = data.Skip(10).Take(Size).ToArray(),
+                    };
+                    
+                    Receive?.Invoke(this, new PackagesReceivedEventArgs(p));
                     break;
                 default:
                     throw new Exception("CMD not found");

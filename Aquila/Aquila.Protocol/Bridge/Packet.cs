@@ -1,4 +1,4 @@
-﻿namespace Aquila.Protocol
+﻿namespace Aquila.Protocol.Bridge
 {
     public class Packet
     {

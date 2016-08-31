@@ -1,6 +1,4 @@
-﻿using System.Globalization;
-
-namespace Aquila.Protocol
+﻿namespace Aquila.Protocol.Bridge
 {
 
 

@@ -7,8 +7,8 @@
     <ProjectGuid>{35494D44-E14B-4C4C-B7C7-BF7B7F8A5FE5}</ProjectGuid>
     <OutputType>Exe</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>Aquila.Bridge</RootNamespace>
-    <AssemblyName>Aquila.Bridge</AssemblyName>
+    <RootNamespace>Aquila.Service</RootNamespace>
+    <AssemblyName>Aquila.Service</AssemblyName>
     <TargetFrameworkVersion>v4.5.2</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
@@ -43,7 +43,6 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="AqSerialPort.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>

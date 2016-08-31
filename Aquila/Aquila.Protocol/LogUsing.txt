@@ -1,0 +1,133 @@
+﻿Inhouse.Sdk.Logger
+
+Logger to .Net Apps
+
+This logger can log on Console, TextFiles, Documents(csv,tsv), Splunk via TCP
+logger is singelton, you dont need create a instance only need wrtie
+ 
+ <code> LogProviderManager.Logger.Log(LogType.info, "Log FA!") </code>
+ 
+Parameters:
+		name = <string> name for reference the log.
+
+		type = Type Provider for the log 
+				* Inhouse.Sdk.Logger.Providers.ConsoleLogProvider, Inhouse.Sdk.Logger	<- Console
+				* Inhouse.Sdk.Logger.Providers.TextLogProvider, Inhouse.Sdk.Logger		<- Text
+		active = enable or disable
+				* true
+				* false
+		levelLog = filter for the log.
+				* debug
+				* info
+				* warning
+				* error
+				* fatal
+				* userdata
+				* appdata
+				* systemdata
+				* none
+		Tip: 1.- When you select the level the logger write the including level and the next forwards
+			 2.- if you put "*" before the level the logger only write log for this level with out forwards
+			 3.- You can arrange the level that you can write if only want debug to error you can put debug|error and the logger only write the
+				 log event debug,info,warning and error.
+		
+		pattern = the pattern to write the event the keys are
+				* %TimeStamp 
+				* %UtcTimeStamp 
+				* %Application 
+				* %HostName 
+				* %Ip 
+				* %ThreadId
+				* %ThreadName 
+				* %ClassName 
+				* %FunctionName 
+				* %Level 
+				* %Item 
+				* %Message 
+		
+		fileRolling = file=<nameFile.ext>;maxsize=<size with unit kb,mb,gb>;directory=<path of directory>
+					  file rolling rename the log automatic.
+
+	    Note: in automatic form the log make rotation for past one day.
+
+Parameter used for providers:
+	
+		Console
+			* type
+			* active
+			* levelLog
+			* pattern
+		Text
+			* type
+			* active
+			* levelLog
+			* pattern
+			* fileRolling
+
+Use:
+0) Add Library by NuGet
+1) Create App.config
+2) Configure Logs on app.config:
+  
+  <configSections>
+    <section name="LogProviders" type="Inhouse.Sdk.Logger.LogProviderConfiguration, Inhouse.Sdk.Logger" />
+  </configSections>
+
+  <LogProviders>
+    <providers>
+      <add name="Console" 
+           type="Inhouse.Sdk.Logger.Providers.ConsoleLogProvider, Inhouse.Sdk.Logger" 
+           active="true" 
+           levelLog="debug" 
+           pattern="%HostName %Ip %ClassName %FunctionName %Message" />
+      <add name="text" 
+		   type="Inhouse.Sdk.Logger.Providers.TextLogProvider, Inhouse.Sdk.Logger" 
+           active="false" 
+           levelLog="debug" 
+           pattern="%TimeStamp %UtcTimeStamp %Application %HostName %Ip [%ThreadId] %ThreadName %ClassName %FunctionName %Level %Item %Message" 
+           fileRolling="file=test.log;maxsize=0;directory=C:\temp" />
+    </providers>
+  </LogProviders>
+
+  Write Log in functions sample c#:
+   
+   static void FA()
+   {
+		LogProviderManager.Logger.Log(LogType.info, "Log FA!");
+   }
+
+
+   Change Log
+   *****************************
+   V 1.0.1.7
+   - add debug provider
+   - fix rotation file
+   - fixed bug on diagnostic event
+
+   *****************************
+   V 1.0.1.6
+   - Remove splunk provider and document provider
+   - write internal file to errors in the base of assembly directory.
+
+   *****************************
+   V 1.0.1.5
+   - Delete the even log write for security errors.
+
+   *****************************
+   V 1.0.1.4
+
+
+   *****************************
+   V 1.0.1.3
+
+
+   *****************************
+   V 1.0.1.2
+
+
+   *****************************
+   V 1.0.1.1
+
+   *****************************
+   V 1.0.1.0
+   - Initial Relase!
