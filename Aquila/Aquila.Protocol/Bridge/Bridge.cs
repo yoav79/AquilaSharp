@@ -73,18 +73,17 @@ namespace Aquila.Protocol.Bridge
         const byte CmdSetLongAddr = 10;
 
         // index CMD
-        const byte Command = 0;
-        const byte Lqi = 1;
-        const byte Rssi = 2;
-        const byte SrcAddrL = 3;
-        const byte SrcAddrH = 4;
-        const byte DstAddrL = 5;
-        const byte DstAddrH = 6;
-        const byte SrcEndPoint = 7;
-        const byte DstEndPoint = 8;
-        const byte Size = 9;
-        const byte Data = 10;
-
+        const byte ICommand = 0;
+        const byte ILqi = 1;
+        const byte IRssi = 2;
+        const byte ISrcAddrL = 3;
+        const byte ISrcAddrH = 4;
+        const byte IDstAddrL = 5;
+        const byte IDstAddrH = 6;
+        const byte ISrcEndPoint = 7;
+        const byte IDstEndPoint = 8;
+        const byte ISize = 9;
+        
         // index OPT
         const byte Prom = 1;
         const byte PanL = 2;
@@ -149,16 +148,16 @@ namespace Aquila.Protocol.Bridge
             if (data.Count == 0)
                 return;
 
-            switch (data[Command])
+            switch (data[ICommand])
             {
-                case CmdAck:
+                
                 case CmdGetSecurity:
                 case CmdPing:
                 case CmdGetLongAddr:
                 case CmdGetOpt:
-                    return;
                 case CmdNack:
-                   // throw new Exception("Nack");
+                case CmdAck:
+                    return;
                 case CmdSetSecurity:
                     if (data.Count < 2) return;
                     _currentSecurity.Enabled = data[Enable] == 1;
@@ -186,17 +185,17 @@ namespace Aquila.Protocol.Bridge
 
                     var p = new Packet()
                     {
-                        Lqi = data[Lqi],
-                        Rssi = data[Rssi],
-                        SrcAddr = data[SrcAddrL] | data[SrcAddrH] << 8,
-                        DstAddr = data[DstAddrL] | data[DstAddrH] << 8,
-                        SrcEndPoint = data[SrcEndPoint],
-                        DstEndPoint = data[DstEndPoint],
-                        Size = data[Size],
+                        Lqi = data[ILqi],
+                        Rssi = data[IRssi],
+                        SrcAddr = data[ISrcAddrL] | data[ISrcAddrH] << 8,
+                        DstAddr = data[IDstAddrL] | data[IDstAddrH] << 8,
+                        SrcEndPoint = data[ISrcEndPoint],
+                        DstEndPoint = data[IDstEndPoint],
+                        Size = data[ISize],
                     };
 
                     if (p.Size > 0)
-                        p.Frame = data.Skip(10).Take(Size).ToArray();
+                        p.Frame = data.Skip(10).Take(p.Size).ToArray();
                     
                     Receive?.Invoke(this, new PackagesReceivedEventArgs(p));
                     break;
@@ -262,6 +261,7 @@ namespace Aquila.Protocol.Bridge
         public void SendData(Packet packet)
         {
             if (!_ready) return;
+
             var payload = new List<byte>
             {
                 CmdData,
@@ -276,7 +276,9 @@ namespace Aquila.Protocol.Bridge
                 (byte) packet.Size,
             };
 
-            payload.AddRange(packet.Frame);
+            if (packet.Size > 0 && packet.Frame.Length > 0)
+                payload.AddRange(packet.Frame);
+
             _slip.Send(payload.ToArray());
         }
 

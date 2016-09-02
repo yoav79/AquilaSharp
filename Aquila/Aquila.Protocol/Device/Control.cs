@@ -25,7 +25,14 @@
             set { _commandType = value; }
         }
 
-        
+        public Control()
+        {
+            _commandType = (byte)CommandTypes.Ack;
+            _hasParameter = 0;
+            _hasData = 0;
+        }
+
+
         public Control(byte value)
         {
             _commandType = (byte)(value & 7);

@@ -23,7 +23,6 @@ namespace Aquila.Protocol.Bridge
         #endregion
 
         private readonly Bridge _bridge;
-        private bool _ready;
         private bool _securityEnabled;
         private int _localAddr;
         private byte[] _localEuiAddr;
@@ -33,45 +32,45 @@ namespace Aquila.Protocol.Bridge
 
         public int ShortAddress => _localAddr;
 
+        public event PackagesReceivedEventHandler Receive;
+        public event NewDeviceReceivedEventHandler NewDevice;
         public Mesh()
         {
             _bridge = new Bridge();
             _bridge.Receive += _bridge_Receive;
-            _ready = false;
             _localAddr = 0x00FF;
             _localEuiAddr = new List<byte>() {0x01, 0x02, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0}.ToArray();
             _securityEnabled = false;
             _pan = DefaultPan;
             _channel = DefaultChannel;
             _keepLive = new Thread(KeepLive);
-        }
 
+            LogProviderManager.Logger.Log(LogType.debug, "Init Mesh");
+        }
+        
+        //recepcion de paketes 00:00:00:00:00:00:00
         private void _bridge_Receive(object sender, PackagesReceivedEventArgs e)
         {
-            if (e.Packet.Frame.Length > 0)
+            LogProviderManager.Logger.Log(LogType.debug, "Message Receive");
+
+            if (e.Packet.Frame.Length <= 0) return;
+
+            if (e.Packet.Frame[0] == CmdGetEui)
             {
-                if (e.Packet.Frame[0] == CmdGetEui)
-                {
-                    Announce(e.Packet.SrcAddr);
-                }
-                else if (e.Packet.Frame[0] == CmdResetEui && e.Packet.Frame.Length >= 9)
-                {
-                    var euiAddr = e.Packet.Frame.Skip(1).Take(8);
-                    Device.DeviceManager.Instance.DeviceFetcher(e.Packet.SrcAddr, euiAddr);
-                }
-                else
-                {
-                    var a =Protocol.Device.Protocol.Instance.Parse(e.Packet);
-                    LogProviderManager.Logger.LogObject(LogType.info,"", a);
-                }
+                Announce(e.Packet.SrcAddr);
+            }
+            else if (e.Packet.Frame[0] == CmdResetEui && e.Packet.Frame.Length >= 9)
+            {
+                var euiAddr = e.Packet.Frame.Skip(1).Take(8).ToArray();
+                NewDevice?.Invoke(this, new NewDeviceReceivedEventArgs(e.Packet.SrcAddr, euiAddr));
+            }
+            else
+            {
+                Receive?.Invoke(this, new PackagesReceivedEventArgs(e.Packet));
             }
         }
 
-        public void SendPacket(Packet packet)
-        {
-            _bridge.SendData(packet);
-        }
-
+        //Keep Live Thread
         private void KeepLive()
         {
             while (_bridge.IsReady)
@@ -94,8 +93,7 @@ namespace Aquila.Protocol.Bridge
         {
             var data = new List<byte>() {CmdResetEui};
             data.AddRange(_localEuiAddr);
-
-
+            
             var p = new Packet()
             {
                 Lqi = 0xff,
@@ -106,6 +104,23 @@ namespace Aquila.Protocol.Bridge
                 DstEndPoint = EndPoint,
                 Size = data.Count,
                 Frame = data.ToArray()
+            };
+
+            _bridge.SendData(p);
+        }
+
+        public void Ping(int destination)
+        {
+            var p = new Packet()
+            {
+                Lqi = 0xff,
+                Rssi = 0xff,
+                SrcAddr = _localAddr,
+                DstAddr = destination,
+                SrcEndPoint = EndPoint,
+                DstEndPoint = EndPoint,
+                Size = 1,
+                Frame = new List<byte>() { CmdGetEui }.ToArray()
             };
 
             _bridge.SendData(p);
@@ -126,31 +141,17 @@ namespace Aquila.Protocol.Bridge
             }
 
             _localEuiAddr = _bridge.LongAddress;
-            _ready = _bridge.IsReady;
             _keepLive.Start();
         }
 
-        public void Ping(int destination)
+        public void SendPacket(Packet packet)
         {
-            var p = new Packet()
-            {
-                Lqi = 0xff,
-                Rssi = 0xff,
-                SrcAddr = _localAddr,
-                DstAddr = destination,
-                SrcEndPoint = EndPoint,
-                DstEndPoint = EndPoint,
-                Size = 1,
-                Frame = new List<byte>() {CmdGetEui}.ToArray()
-            };
-
-            _bridge.SendData(p);
+            _bridge.SendData(packet);
         }
-
+        
         public void Close()
         {
             _bridge.Close();
-            _ready = false;
         }
     }
 }

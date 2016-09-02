@@ -1,5 +1,8 @@
-﻿using System.Reflection.Emit;
+﻿using System.Collections.Generic;
+using System.Text;
+using System.Threading;
 using Aquila.Protocol.Bridge;
+using Inhouse.Sdk.Logger;
 
 namespace Aquila.Protocol.Device
 {
@@ -8,31 +11,9 @@ namespace Aquila.Protocol.Device
         #region Const
 
         const byte EndPoint = 13;
-        const byte Version = Packet.ProtocolVersion;
+        const byte Version = ProtoPacket.ProtocolVersion;
 
-        const byte Nack = 0;
-        const byte Ack = 1;
-        const byte Action = 2;
-        const byte Get = 3;
-        const byte Post = 4;
-        const byte Custom = 5;
-
-        public const byte ComNAction = 0;
-        public const byte ComNEvents = 1;
-        public const byte ComClass = 2;
-        public const byte ComSize = 3;
-        public const byte ComNEntries = 4;
-        public const byte ComAbsEntry = 5;
-        public const byte ComEntry = 6;
-        public const byte ComClear = 7;
-        public const byte ComAddEntry = 8;
-        public const byte ComDelAbsEntry = 9;
-        public const byte ComDelEntry = 10;
-        public const byte ComAction = 11;
-        public const byte ComEvent = 12;
-        public const byte ComName = 13;
-        public const byte ComEui = 14;
-
+      
         #endregion
 
         private static readonly object SyncRoot = new object();
@@ -66,63 +47,91 @@ namespace Aquila.Protocol.Device
             if (_mesh != null) return;
 
             _mesh = new Mesh();
-            _mesh.Begin("COM3", 57600);
+            _mesh.Receive += _mesh_Receive;
+            _mesh.NewDevice += _mesh_NewDevice;
+            _mesh.Begin("COM6", 57600);
         }
 
-        public Packet Parse(Bridge.Packet packet)
+        private void _mesh_NewDevice(object sender, NewDeviceReceivedEventArgs e)
         {
-            var pkt = new Packet();
+            DeviceFetcher(e.SrcAddr, e.EuiAddr);
+        }
+
+        private void _mesh_Receive(object sender, PackagesReceivedEventArgs e)
+        {
+            var ppk = Parse(e.Packet);
+            LogProviderManager.Logger.LogObject(LogType.error, "", ppk);
+            if(ppk.Data!= null)
+            LogProviderManager.Logger.Log(LogType.warning, Encoding.Default.GetString(ppk.Data));
+
+        }
+
+        public ProtoPacket Parse(Packet packet)
+        {
+            var pkt = new ProtoPacket();
 
             if (packet.SrcEndPoint != EndPoint || packet.DstEndPoint != EndPoint)
                 return null;
 
             pkt.SrcAddr = packet.SrcAddr;
             pkt.DstAddr = packet.DstAddr;
-
             pkt.FromRaw(packet.Frame);
 
-            return pkt;
+            return pkt.Version != Version ? null : pkt;
         }
 
-        private void Send(Packet packet)
+        private void Send(ProtoPacket packet)
         {
-            var data = packet.GetRaw();
-
-            var bp = new Bridge.Packet();
-            bp.Lqi = 0xff;
-            bp.Rssi = 0xff;
-            bp.SrcAddr = packet.SrcAddr;
-            bp.DstAddr = packet.DstAddr;
-            bp.SrcEndPoint = EndPoint;
-            bp.DstEndPoint = EndPoint;
-            bp.Size = packet.GetRaw().Length;
-            bp.Frame = packet.GetRaw();
-
+            var bp = new Packet
+            {
+                Lqi = 0xff,
+                Rssi = 0xff,
+                SrcAddr = packet.SrcAddr,
+                DstAddr = packet.DstAddr,
+                SrcEndPoint = EndPoint,
+                DstEndPoint = EndPoint,
+                Size = packet.GetRaw().Length,
+                Frame = packet.GetRaw()
+            };
             _mesh.SendPacket(bp);
         }
 
-
-        private void SendAck(int dstAddr)
+        public void SendAck(int dstAddr)
         {
+            var ppk = new ProtoPacket
+            {
+                DstAddr = dstAddr,
+                SrcAddr = _mesh.ShortAddress,
+                Control = new Control(0) {CommandType = (byte)CommandTypes.Ack}
+            };
+
+            Send(ppk);
         }
 
-        private void SendNack(int dstAddr)
+        public void SendNack(int dstAddr)
         {
-        }
+            var ppk = new ProtoPacket
+            {
+                DstAddr = dstAddr,
+                SrcAddr = _mesh.ShortAddress,
+                Control = new Control(0) { CommandType = (byte)CommandTypes.Nack }
+            };
 
+            Send(ppk);
+        }
 
         public void Ping(int dstAddr)
         {
             _mesh.Ping(dstAddr);
         }
 
-        public void RequestAction(int address, byte action, byte parameter)
+        public void RequestAction(int dstAddr, byte action, byte parameter)
         {
-            var p = new Packet
+            var p = new ProtoPacket
             {
-                DstAddr = address,
+                DstAddr = dstAddr,
                 SrcAddr = _mesh.ShortAddress,
-                Control = new Control(0) {CommandType = Packet.CmdAction}
+                Control = new Control(0) {CommandType = (byte)CommandTypes.Action }
             };
 
             if (parameter > 0)
@@ -134,25 +143,24 @@ namespace Aquila.Protocol.Device
 
             Send(p);
         }
-
-
-        public void RequestGet(int address, byte action, byte parameter, byte[] data)
+        
+        public void RequestGet(int dstAddr, byte action, byte parameter, byte[] data)
         {
-            Request(false, address, action, parameter, data);
+            Request(false, dstAddr, action, parameter, data);
         }
 
-        public void RequestPost(int address, byte action, byte parameter, byte[] data)
+        public void RequestPost(int dstAddr, byte action, byte parameter, byte[] data)
         {
-            Request(true, address, action, parameter, data);
+            Request(true, dstAddr, action, parameter, data);
         }
 
-        public void RequestCustom(int address, byte[] data)
+        public void RequestCustom(int dstAddr, byte[] data)
         {
-            var p = new Packet
+            var p = new ProtoPacket
             {
-                DstAddr = address,
+                DstAddr = dstAddr,
                 SrcAddr = _mesh.ShortAddress,
-                Control = new Control(0) {CommandType = Packet.CmdCustom}
+                Control = new Control(0) {CommandType = (byte)CommandTypes.Custom }
             };
 
             if (data.Length > 0)
@@ -164,13 +172,13 @@ namespace Aquila.Protocol.Device
             Send(p);
         }
 
-        private void Request(bool isPost, int address, byte action, byte parameter, byte[] data)
+        private void Request(bool isPost, int dstAddr, byte action, byte parameter, byte[] data)
         {
-            var p = new Packet
+            var p = new ProtoPacket
             {
-                DstAddr = address,
+                DstAddr = dstAddr,
                 SrcAddr = _mesh.ShortAddress,
-                Control = new Control(0) {CommandType = isPost ? Packet.CmdPost : Packet.CmdGet}
+                Control = new Control() {CommandType = isPost ? (byte)CommandTypes.Post : (byte)CommandTypes.Get}
             };
 
             if (parameter > 0)
@@ -189,5 +197,17 @@ namespace Aquila.Protocol.Device
             Send(p);
         }
 
+        public void DeviceFetcher(int srcAddr, IEnumerable<byte> euiAddr)
+        {
+            //RequestGet(srcAddr, (byte)Commands.Class, 0, new List<byte>().ToArray());
+            //RequestGet(srcAddr, (byte)Commands.Name, 0, new List<byte>().ToArray());
+            //RequestGet(srcAddr, (byte)Commands.Action, 0, new List<byte>().ToArray());
+            //RequestGet(srcAddr, (byte)Commands.Event, 0, new List<byte>().ToArray());
+            //RequestGet(srcAddr, (byte)Commands.Action, 1, new List<byte>().ToArray());
+            RequestGet(srcAddr, (byte)Commands.Action, 2, new List<byte>().ToArray());
+            SendAck(srcAddr);
+
+
+        }
     }
 }

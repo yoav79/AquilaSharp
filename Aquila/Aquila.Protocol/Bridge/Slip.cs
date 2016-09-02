@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO.Ports;
 using System.Linq;
+using System.Threading;
 using Inhouse.Sdk.Logger;
 
 namespace Aquila.Protocol.Bridge
@@ -30,6 +31,8 @@ namespace Aquila.Protocol.Bridge
         int _index;
         short _state;
 
+        private DateTime _lastSent;
+
         public Slip()
         {
             _state = Idle;
@@ -41,6 +44,7 @@ namespace Aquila.Protocol.Bridge
             _serialPort.DataReceived += serialPort_DataReceived;
             _serialPort.ReadTimeout = 500;
             _serialPort.WriteTimeout = 500;
+            _lastSent = DateTime.Now;
         }
 
         public void Begin(string portName, int boudRate)
@@ -147,7 +151,12 @@ namespace Aquila.Protocol.Bridge
 
                 LogProviderManager.Logger.Log(LogType.debug,
                     " W -> " + string.Join(" ", buffer.Select(a => a.ToString("X2"))));
+
+                while (DateTime.Now.Subtract(_lastSent).Milliseconds < 50)
+                    Thread.Sleep(10);
+                
                 _serialPort.Write(buffer.Select(c => (byte)c).ToArray(), 0, buffer.Count);
+                _lastSent = DateTime.Now;
             }
             else 
                 throw new Exception("is not Open");

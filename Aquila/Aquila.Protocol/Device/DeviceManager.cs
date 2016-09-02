@@ -20,13 +20,12 @@ namespace Aquila.Protocol.Device
         {
             get
             {
-                if (_instance == null)
+                if (_instance != null) return _instance;
+
+                lock (SyncRoot)
                 {
-                    lock (SyncRoot)
-                    {
-                        if (_instance == null)
-                            _instance = new DeviceManager();
-                    }
+                    if (_instance == null)
+                        _instance = new DeviceManager();
                 }
 
                 return _instance;
@@ -40,27 +39,8 @@ namespace Aquila.Protocol.Device
             device.EuiAddr = euiAddr;
 
             FetchClass(device.SrcAddr);
-
-            /*lock (SyncRoot)
-            {
-                //_queue.Enqueue(device);
-            }*/
         }
-
-        private void ExecuteFetcher()
-        {
-            while (true)
-            {
-
-                if (_queue.Count > 0)
-                {
-                    var device = _queue.Dequeue();
-                    
-                }
-                Thread.Sleep(100);
-            }
-        }
-
+        
         public void Discover()
         {
              Protocol.Instance.Ping(Mesh.BroadCast);
@@ -93,7 +73,7 @@ namespace Aquila.Protocol.Device
 
         public void FetchClass(int address)
         {
-            RequestGet(address, (byte) Protocol.ComClass, 0, new List<byte>().ToArray());
+            RequestGet(address, (byte) Commands.Class, 0, new List<byte>().ToArray());
         }
 
     }
