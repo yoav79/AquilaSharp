@@ -21,7 +21,6 @@ namespace Aquila.Protocol.Bridge
 
         const short Idle = 0;
         const short Receiving = 1;
-        const short Error = 2;
 
         const short MaxSize = 255;
         #endregion
@@ -30,6 +29,8 @@ namespace Aquila.Protocol.Bridge
         readonly byte[] _buffer = new byte[MaxSize];
         int _index;
         short _state;
+        private readonly Thread _read;
+
 
         private DateTime _lastSent;
 
@@ -41,10 +42,11 @@ namespace Aquila.Protocol.Bridge
             _serialPort.Handshake = Handshake.None;
             _serialPort.Parity = Parity.None;
             _serialPort.StopBits = StopBits.One;
-            _serialPort.DataReceived += serialPort_DataReceived;
+            //_serialPort.DataReceived += serialPort_DataReceived;
             _serialPort.ReadTimeout = 500;
             _serialPort.WriteTimeout = 500;
             _lastSent = DateTime.Now;
+            _read = new Thread(Read);
         }
 
         public void Begin(string portName, int boudRate)
@@ -52,6 +54,7 @@ namespace Aquila.Protocol.Bridge
             _serialPort.PortName = portName;
             _serialPort.BaudRate = boudRate;
             _serialPort.Open();
+            _read.Start();
         }
 
         private void serialPort_DataReceived(object sender, SerialDataReceivedEventArgs e)
@@ -112,6 +115,73 @@ namespace Aquila.Protocol.Bridge
             }
         }
 
+        private void Read()
+        {
+            var b = new List<byte>();
+
+            while (_serialPort.IsOpen)
+            {
+                while (_serialPort.BytesToRead > 0)
+                {
+                    var recv = (byte) _serialPort.ReadByte();
+
+                    if (Idle == _state)
+                    {
+                        if (recv == End)
+                        {
+                            _index = 0;
+                            _state = Receiving;
+                            continue;
+                        }
+                    }
+
+                    if (_state != Receiving)
+                    {
+                        b.Clear();
+                        break;
+                    }
+
+
+                    if (_index >= MaxSize - 1)
+                    {
+                        _state = Idle;
+                        b.Clear();
+                        break;
+                    }
+
+                    if (recv == End)
+                    {
+
+                        if (b.Count == 0)
+                        {
+                            b.Clear();
+                            break;
+                        }
+
+                        _state = Idle;
+
+                        if (!CheckCrc(b.ToArray()))
+                        {
+                            LogProviderManager.Logger.Log(LogType.error, "CRC Fail");
+                            b.Clear();
+                            break;
+                        }
+
+                        LogProviderManager.Logger.Log(LogType.debug,
+                            " R -> " + string.Join(" ", b.Select(a => a.ToString("X2"))));
+
+                        Receive?.Invoke(this, new DataReceivedEventArgs(b.Take(b.Count - 2).ToArray()));
+                        b.Clear();
+                    }
+                    else
+                    {
+                        b.Add(recv);
+                    }
+
+                }
+            }
+        }
+
         public void Send(byte[] data)
         {
 
@@ -125,8 +195,8 @@ namespace Aquila.Protocol.Bridge
                 var newData = new byte[data.Length + 2];
                 Buffer.BlockCopy(data, 0, newData, 0, data.Length);
 
-                newData[newData.Length - 2] = (byte) crcbuffer[0];
-                newData[newData.Length - 1] = (byte) crcbuffer[1];
+                newData[newData.Length - 2] = crcbuffer[0];
+                newData[newData.Length - 1] = crcbuffer[1];
 
                 var buffer = new List<byte> {End};
 
@@ -155,7 +225,7 @@ namespace Aquila.Protocol.Bridge
                 while (DateTime.Now.Subtract(_lastSent).Milliseconds < 50)
                     Thread.Sleep(10);
                 
-                _serialPort.Write(buffer.Select(c => (byte)c).ToArray(), 0, buffer.Count);
+                _serialPort.Write(buffer.Select(c => c).ToArray(), 0, buffer.Count);
                 _lastSent = DateTime.Now;
             }
             else 
@@ -167,13 +237,12 @@ namespace Aquila.Protocol.Bridge
         {
             int crc = 0;
             var size = data.Length;
-            var i = 0;
             var index = 0;
 
             while (--size >= 0)
             {
                 crc = (crc ^ data[index++] << 8) & 0xFFFF;
-                i = 8;
+                var i = 8;
                 do
                 {
                     if ((crc & 0x8000) == 0x8000)

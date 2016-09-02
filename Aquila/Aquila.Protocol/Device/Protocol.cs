@@ -9,11 +9,8 @@ namespace Aquila.Protocol.Device
     public class Protocol
     {
         #region Const
-
         const byte EndPoint = 13;
         const byte Version = ProtoPacket.ProtocolVersion;
-
-      
         #endregion
 
         private static readonly object SyncRoot = new object();
@@ -49,7 +46,7 @@ namespace Aquila.Protocol.Device
             _mesh = new Mesh();
             _mesh.Receive += _mesh_Receive;
             _mesh.NewDevice += _mesh_NewDevice;
-            _mesh.Begin("COM6", 57600);
+            _mesh.Begin("COM3", 57600);
         }
 
         private void _mesh_NewDevice(object sender, NewDeviceReceivedEventArgs e)
@@ -60,8 +57,11 @@ namespace Aquila.Protocol.Device
         private void _mesh_Receive(object sender, PackagesReceivedEventArgs e)
         {
             var ppk = Parse(e.Packet);
-            LogProviderManager.Logger.LogObject(LogType.error, "", ppk);
-            if(ppk.Data!= null)
+
+            LogProviderManager.Logger.Log(LogType.warning, ((Commands)ppk.Command).ToString());
+
+
+            if (ppk.Data!= null)
             LogProviderManager.Logger.Log(LogType.warning, Encoding.Default.GetString(ppk.Data));
 
         }
@@ -199,13 +199,24 @@ namespace Aquila.Protocol.Device
 
         public void DeviceFetcher(int srcAddr, IEnumerable<byte> euiAddr)
         {
-            //RequestGet(srcAddr, (byte)Commands.Class, 0, new List<byte>().ToArray());
-            //RequestGet(srcAddr, (byte)Commands.Name, 0, new List<byte>().ToArray());
-            //RequestGet(srcAddr, (byte)Commands.Action, 0, new List<byte>().ToArray());
-            //RequestGet(srcAddr, (byte)Commands.Event, 0, new List<byte>().ToArray());
-            //RequestGet(srcAddr, (byte)Commands.Action, 1, new List<byte>().ToArray());
-            RequestGet(srcAddr, (byte)Commands.Action, 2, new List<byte>().ToArray());
-            SendAck(srcAddr);
+            RequestGet(srcAddr, (byte)Commands.Class, 0, new List<byte>().ToArray());
+            RequestGet(srcAddr, (byte)Commands.Name, 0, new List<byte>().ToArray());
+            RequestGet(srcAddr, (byte)Commands.Eui, 0, new List<byte>().ToArray());
+
+            RequestGet(srcAddr, (byte)Commands.Size, 0, new List<byte>().ToArray());
+            RequestGet(srcAddr, (byte)Commands.Clear, 0, new List<byte>().ToArray());
+
+            RequestGet(srcAddr, (byte)Commands.AbsEntry, 0, new List<byte>().ToArray());
+
+            
+
+            RequestGet(srcAddr, (byte)Commands.NEntries, 0, new List<byte>().ToArray());
+            RequestGet(srcAddr, (byte)Commands.NAction, 1, new List<byte>().ToArray());
+            RequestGet(srcAddr, (byte)Commands.NEvents, 1, new List<byte>().ToArray());
+
+            RequestGet(srcAddr, (byte)Commands.Action, 1, new List<byte>().ToArray());
+
+            RequestGet(srcAddr, (byte)Commands.Event, 1, new List<byte>().ToArray());
 
 
         }
