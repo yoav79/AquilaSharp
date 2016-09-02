@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
+using Inhouse.Sdk.Logger;
 
 namespace Aquila.Protocol.Bridge
 {
@@ -14,11 +16,10 @@ namespace Aquila.Protocol.Bridge
         const byte CmdGetEui = 0;
         const byte CmdResetEui = 1;
         const int PingTimeOut = 1000;
-
         //
+        public const int WaitKeepLive = 60; //seconds
         public const byte MaxPayLoad = 105;
         public const int BroadCast = 0xFFFF;
-
         #endregion
 
         private readonly Bridge _bridge;
@@ -28,7 +29,9 @@ namespace Aquila.Protocol.Bridge
         private byte[] _localEuiAddr;
         private int _pan;
         private byte _channel;
+        private Thread _keepLive;
 
+        public int ShortAddress => _localAddr;
 
         public Mesh()
         {
@@ -40,6 +43,7 @@ namespace Aquila.Protocol.Bridge
             _securityEnabled = false;
             _pan = DefaultPan;
             _channel = DefaultChannel;
+            _keepLive = new Thread(KeepLive);
         }
 
         private void _bridge_Receive(object sender, PackagesReceivedEventArgs e)
@@ -52,8 +56,36 @@ namespace Aquila.Protocol.Bridge
                 }
                 else if (e.Packet.Frame[0] == CmdResetEui && e.Packet.Frame.Length >= 9)
                 {
-                    /*var euiAddr = packet.data.slice(1, 9);
-                    self.emit("gotAnnounce", packet.srcAddr, euiAddr);*/
+                    var euiAddr = e.Packet.Frame.Skip(1).Take(8);
+                    Device.DeviceManager.Instance.DeviceFetcher(e.Packet.SrcAddr, euiAddr);
+                }
+                else
+                {
+                    var a =Protocol.Device.Protocol.Instance.Parse(e.Packet);
+                    LogProviderManager.Logger.LogObject(LogType.info,"", a);
+                }
+            }
+        }
+
+        public void SendPacket(Packet packet)
+        {
+            _bridge.SendData(packet);
+        }
+
+        private void KeepLive()
+        {
+            while (_bridge.IsReady)
+            {
+                //try send ping 
+                Ping(Mesh.BroadCast);
+
+                //time wait
+                for(int i=0 ;i< WaitKeepLive;i++)
+                {
+                    Thread.Sleep(1000);
+
+                    if(!_bridge.IsReady)
+                        break;
                 }
             }
         }
@@ -81,7 +113,7 @@ namespace Aquila.Protocol.Bridge
 
         public void Begin(string port, int baudrate)
         {
-            _bridge.Begin(port,baudrate);
+            _bridge.Begin(port, baudrate);
 
             var start = DateTime.Now;
 
@@ -95,6 +127,7 @@ namespace Aquila.Protocol.Bridge
 
             _localEuiAddr = _bridge.LongAddress;
             _ready = _bridge.IsReady;
+            _keepLive.Start();
         }
 
         public void Ping(int destination)
@@ -112,6 +145,12 @@ namespace Aquila.Protocol.Bridge
             };
 
             _bridge.SendData(p);
+        }
+
+        public void Close()
+        {
+            _bridge.Close();
+            _ready = false;
         }
     }
 }

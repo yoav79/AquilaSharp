@@ -9,14 +9,15 @@ namespace Aquila.Service
       {
           static void Main(string[] args)
           {
-
+              Console.WriteLine("Start!!!!");
               // Look up Bridge;
-              var mesh = new Mesh();
 
+                Protocol.Device.Protocol.Instance.Start();
               // find ?
-              mesh.Begin("COM3", 57600);
-              mesh.Ping(Mesh.BroadCast);
+              
+
               Console.ReadKey();
+
           }
       }
 }

@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO.Ports;
 using System.Linq;
+using Inhouse.Sdk.Logger;
 
 namespace Aquila.Protocol.Bridge
 {
@@ -51,9 +52,13 @@ namespace Aquila.Protocol.Bridge
 
         private void serialPort_DataReceived(object sender, SerialDataReceivedEventArgs e)
         {
+
+            List<byte> b = new List<byte>();
+
             while (_serialPort.BytesToRead > 0)
             {
-                var recv = (char)_serialPort.ReadByte();
+                var recv = (byte)_serialPort.ReadByte();
+                b.Add(recv);
 
                 if (Idle == _state)
                 {
@@ -86,8 +91,13 @@ namespace Aquila.Protocol.Bridge
                     _state = Idle;
 
                     if (!CheckCrc(buf))
-                        Console.WriteLine("CRC FAIL");
-                    
+                    {
+                        LogProviderManager.Logger.Log(LogType.error, "CRC Fail");
+                        return;
+                    }
+
+                    LogProviderManager.Logger.Log(LogType.debug,
+                        " R -> " + string.Join(" ", b.Select(a => a.ToString("X2"))));
                     Receive?.Invoke(this, new DataReceivedEventArgs(buf.Take(buf.Length - 2).ToArray()));
                 }
                 else
@@ -100,10 +110,6 @@ namespace Aquila.Protocol.Bridge
 
         public void Send(byte[] data)
         {
-
-            /*foreach (var item in data)
-                Console.Write(((int)item).ToString("X") + " ");
-            Console.WriteLine("");*/
 
             if (_serialPort.IsOpen)
             {
@@ -139,6 +145,8 @@ namespace Aquila.Protocol.Bridge
                 }
                 buffer.Add(End);
 
+                LogProviderManager.Logger.Log(LogType.debug,
+                    " W -> " + string.Join(" ", buffer.Select(a => a.ToString("X2"))));
                 _serialPort.Write(buffer.Select(c => (byte)c).ToArray(), 0, buffer.Count);
             }
             else 
@@ -184,6 +192,12 @@ namespace Aquila.Protocol.Bridge
 
             // Comparing
             return calcdCrc == dataCrc;
+        }
+
+        public void Close()
+        {
+            _serialPort.Close();
+            
         }
     }
 }

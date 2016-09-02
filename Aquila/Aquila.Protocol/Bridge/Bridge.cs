@@ -158,7 +158,7 @@ namespace Aquila.Protocol.Bridge
                 case CmdGetOpt:
                     return;
                 case CmdNack:
-                    throw new Exception("Nack");
+                   // throw new Exception("Nack");
                 case CmdSetSecurity:
                     if (data.Count < 2) return;
                     _currentSecurity.Enabled = data[Enable] == 1;
@@ -193,19 +193,16 @@ namespace Aquila.Protocol.Bridge
                         SrcEndPoint = data[SrcEndPoint],
                         DstEndPoint = data[DstEndPoint],
                         Size = data[Size],
-                        Frame = data.Skip(10).Take(Size).ToArray(),
                     };
+
+                    if (p.Size > 0)
+                        p.Frame = data.Skip(10).Take(Size).ToArray();
                     
                     Receive?.Invoke(this, new PackagesReceivedEventArgs(p));
                     break;
                 default:
                     throw new Exception("CMD not found");
             }
-
-            foreach (var item in data)
-                Console.Write(((int) item).ToString("X") + " ");
-
-            Console.WriteLine("");
         }
 
         public void Ping()
@@ -271,9 +268,9 @@ namespace Aquila.Protocol.Bridge
                 (byte) packet.Lqi,
                 (byte) packet.Rssi,
                 (byte) ((byte) packet.SrcAddr & 0xff),
-                (byte) ((byte) packet.SrcAddr >> 8 & 0xff),
+                (byte) ((byte) (packet.SrcAddr >> 8) & 0xff),
                 (byte) ((byte) packet.DstAddr & 0xff),
-                (byte) ((byte) packet.DstAddr >> 8 & 0xff),
+                (byte) ((byte) (packet.DstAddr >> 8) & 0xff),
                 (byte) packet.SrcEndPoint,
                 (byte) packet.DstEndPoint,
                 (byte) packet.Size,
@@ -282,5 +279,12 @@ namespace Aquila.Protocol.Bridge
             payload.AddRange(packet.Frame);
             _slip.Send(payload.ToArray());
         }
+
+        public void Close()
+        {
+            _slip.Close();
+            _ready = false;
+        }
+
     }
 }
