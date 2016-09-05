@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
 using Aquila.Protocol.Bridge;
+using Aquila.Protocol.Device;
 
 namespace Aquila.Service
 {
@@ -12,9 +14,14 @@ namespace Aquila.Service
               Console.WriteLine("Start!!!!");
               // Look up Bridge;
 
-                Protocol.Device.Protocol.Instance.Start();
+              Protocol.Bridge.Protocol.Instance.Start();
               // find ?
-              
+
+
+              Task.Factory.StartNew(() =>
+              {
+
+              });
 
               Console.ReadKey();
 

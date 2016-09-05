@@ -59,11 +59,12 @@
     <Compile Include="Bridge\DataReceived.cs" />
     <Compile Include="Bridge\Mesh.cs" />
     <Compile Include="Bridge\Packet.cs" />
-    <Compile Include="Device\Constants.cs" />
-    <Compile Include="Device\Control.cs" />
+    <Compile Include="Device\Enums.cs" />
+    <Compile Include="Bridge\Control.cs" />
+    <Compile Include="Device\Device.cs" />
     <Compile Include="Device\DeviceManager.cs" />
-    <Compile Include="Device\ProtoPacket.cs" />
-    <Compile Include="Device\Protocol.cs" />
+    <Compile Include="Bridge\ProtoPacket.cs" />
+    <Compile Include="Bridge\Protocol.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Bridge\Slip.cs" />
   </ItemGroup>

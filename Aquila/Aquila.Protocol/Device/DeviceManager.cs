@@ -1,6 +1,5 @@
 ﻿using System.Collections.Generic;
-using System.Dynamic;
-using System.Threading;
+using System.Linq;
 using Aquila.Protocol.Bridge;
 
 namespace Aquila.Protocol.Device
@@ -9,11 +8,13 @@ namespace Aquila.Protocol.Device
     {
         private static readonly object SyncRoot = new object();
         private static DeviceManager _instance = new DeviceManager();
-        private Queue<dynamic> _queue;
+        private readonly List<Device> _devices;
 
+        public List<Device> Devices => _devices;
 
         private DeviceManager()
         {
+            _devices = new List<Device>();
         }
 
         public static DeviceManager Instance
@@ -31,51 +32,39 @@ namespace Aquila.Protocol.Device
                 return _instance;
             }
         }
-
-        public void DeviceFetcher(int srcAddr, IEnumerable<byte> euiAddr)
-        {
-            dynamic device = new ExpandoObject();
-            device.SrcAddr = srcAddr;
-            device.EuiAddr = euiAddr;
-
-            FetchClass(device.SrcAddr);
-        }
         
         public void Discover()
         {
-             Protocol.Instance.Ping(Mesh.BroadCast);
+             Bridge.Protocol.Instance.Ping(Mesh.BroadCast);
         }
 
-        private void RequestAction(int address, byte action, byte param)
+        public Device AddNew(int srcAddr, byte[] euiAddr)
         {
-            Protocol.Instance.RequestAction(address, action, param);
+            var d = new Device()
+            {
+                ShortAddress = srcAddr,
+                Address = euiAddr,
+                FetchComplete = false
+            };
+
+            if (_devices.FirstOrDefault(a => a.ShortAddress == srcAddr) == null)
+                _devices.Add(d);
+
+            return d;
         }
 
-        private void RequestGet(int address, byte action, byte param, byte[] data)
+        public Device AddNew(int srcAddr)
         {
-            Protocol.Instance.RequestGet(address, action, param, data);
-        }
+            var d = new Device()
+            {
+                ShortAddress = srcAddr,
+            };
 
-        private void RequestPost(int address, byte action, byte param, byte[] data)
-        {
-            Protocol.Instance.RequestPost(address, action, param, data);
-        }
+            if (_devices.FirstOrDefault(a => a.ShortAddress == srcAddr) == null)
+                _devices.Add(d);
 
-        private void RequestCustom(int address, byte[] data)
-        {
-            Protocol.Instance.RequestCustom(address, data);
+            return d;
         }
-
-        public void FetchAll()
-        {
-            
-        }
-
-        public void FetchClass(int address)
-        {
-            RequestGet(address, (byte) Commands.Class, 0, new List<byte>().ToArray());
-        }
-
     }
 }
 
