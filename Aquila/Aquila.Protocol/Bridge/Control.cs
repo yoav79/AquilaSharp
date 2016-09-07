@@ -1,4 +1,6 @@
-﻿namespace Aquila.Protocol.Device
+﻿using Aquila.Protocol.Device;
+
+namespace Aquila.Protocol.Bridge
 {
     public class Control
     {
